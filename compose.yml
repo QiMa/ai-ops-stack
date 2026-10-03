@@ -1,0 +1,70 @@
+# lanhc AI-Ops 一键部署栈（本地/小规模闭环）
+#
+# 用法：
+#   cd /home/dev/src/ai-ops-stack
+#   cp .env.example .env   # 填写真实凭据
+#   docker compose up -d --build
+#
+# 组件：
+#   lanhc-hub   控制台 + ai-ops API（管理端口 3081 -> 81）
+#   ops-runner  Codex worker（内置 Codex CLI + mcp-lanhc，消费 ai_ops_run 队列）
+#
+# 说明：
+#   - headscale 不在本栈内：假定已有控制面，通过 HEADSCALE_URL 接入。
+#   - lanhc-agent 部署在每台设备，不在本栈内。
+#   - 生产多副本时，只让一个 hub 实例开启 AIOPS_SCHEDULER=1。
+#   - 容器内 hub 直连地址是 http://hub:3000（不经 nginx），worker 自行拼接 /ai-ops/*。
+
+services:
+  hub:
+    build:
+      context: ../lanhc-hub
+      dockerfile: docker/Dockerfile
+    image: lanhc-hub:aiops-local
+    container_name: ai-ops-hub
+    restart: unless-stopped
+    ports:
+      - "3081:81"
+    environment:
+      DB_SQLITE_FILE: /data/database.sqlite
+      DISABLE_IPV6: "true"
+      # 可选：仅在单实例/本地开启自动扫描，生产多副本只开一个
+      AIOPS_SCHEDULER: ${AIOPS_SCHEDULER:-0}
+      AIOPS_SCHEDULER_TOKEN: ${AIOPS_SCHEDULER_TOKEN:-}
+    volumes:
+      - hub-data:/data
+      - hub-le:/etc/letsencrypt
+
+  ops-runner:
+    build:
+      context: ../ops-runner
+      dockerfile: Dockerfile
+      additional_contexts:
+        mcp: ../mcp-lanhc
+    image: lanhc-ops-runner:aiops-local
+    container_name: ai-ops-runner
+    restart: unless-stopped
+    depends_on:
+      - hub
+    environment:
+      AIOPS_HUB_URL: http://hub:3000
+      AIOPS_HUB_TOKEN: ${AIOPS_HUB_TOKEN:-}
+      AIOPS_WORKER_ID: ai-ops-runner-01
+      AIOPS_MODEL: ${AIOPS_MODEL:-huayu-v2}
+      AIOPS_POLL_INTERVAL_MS: ${AIOPS_POLL_INTERVAL_MS:-15000}
+      CODEX_BIN: ${CODEX_BIN:-codex}
+      CODEX_BASE_URL: ${CODEX_BASE_URL:-https://baizor.com/v1}
+      CODEX_WIRE_API: ${CODEX_WIRE_API:-responses}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      HEADSCALE_URL: ${HEADSCALE_URL:-}
+      HEADSCALE_API_KEY: ${HEADSCALE_API_KEY:-}
+      REDFISH_URL: ${REDFISH_URL:-}
+      REDFISH_USER: ${REDFISH_USER:-}
+      REDFISH_PASSWORD: ${REDFISH_PASSWORD:-}
+    volumes:
+      - codex-home:/workspace/codex-home
+
+volumes:
+  hub-data:
+  hub-le:
+  codex-home:
