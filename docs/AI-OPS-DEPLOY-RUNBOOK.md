@@ -248,6 +248,15 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry/rules \
 > `20261003000002_ai_ops_telemetry_node_name.js` 已修）；worker 上报时也会带
 > `node_name`。生产已建 `smart.power_on_hours > 60000` 验证规则（incident 6）。
 
+规则字段：
+
+- `cooldown_sec`（默认 86400，迁移
+  `20261004000001_ai_ops_alert_rule_cooldown.js`）：静态阈值（如
+  `power_on_hours`）永远为真，人工解决后必须等冷却期结束才会再次开单；
+  设 `0` 关闭冷却。证据里会带 `rule_id`，用来判定"同一条规则"。
+- 离线/过期类 incident 会在节点恢复在线时由 `scan-offline-expired`
+  自动置为 `resolved`（summary = 节点已恢复在线），不再长期挂 `open`。
+
 ### 5.3 样本上报
 
 生产由 `ops-runner` 定时采集，不用 agent 自己推：worker 每
@@ -361,7 +370,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-3` |
 
 设备识别增强：
 
