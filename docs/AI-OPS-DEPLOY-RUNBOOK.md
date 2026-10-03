@@ -272,8 +272,14 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
         {"metric":"smart.temperature_c","value":44}]}'
 ```
 
-已知限制：老版本 `lanhc-agent` 没有 `/v1/disk/list`，`agent_disks` 会返回
-`404 page not found`；该节点如实记入 collection failures，升级 agent 后恢复。
+已知限制：
+
+- 老版本 `lanhc-agent` 没有 `/v1/disk/list`，`agent_disks` 会返回
+  `404 page not found`；该节点如实记入 collection failures，升级 agent 后恢复。
+- 2026-10-04 已把金丝雀 agent 升到 `0e500124c`：`/v1/disk/list` 存在，但该
+  WSL 宿主未装 `smartmontools`，因此现在返回结构化错误
+  `agent_disks@lanhc-canary-agent (smartctl not installed)`，而不是静默跳过。
+  在该宿主 `apt install smartmontools` 后即可开始上报该节点的磁盘指标。
 
 ## 6. 验证验收（R930 场景）
 
