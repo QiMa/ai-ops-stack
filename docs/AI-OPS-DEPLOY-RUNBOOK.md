@@ -276,10 +276,13 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 
 - 老版本 `lanhc-agent` 没有 `/v1/disk/list`，`agent_disks` 会返回
   `404 page not found`；该节点如实记入 collection failures，升级 agent 后恢复。
-- 2026-10-04 已把金丝雀 agent 升到 `0e500124c`：`/v1/disk/list` 存在，但该
-  WSL 宿主未装 `smartmontools`，因此现在返回结构化错误
+- 2026-10-04 已把金丝雀 agent 升到 `0e500124c`（发布包
+  `1.102.5+lanhc12`）：`/v1/disk/list` 存在，但该 WSL 宿主未装
+  `smartmontools`，因此现在返回结构化错误
   `agent_disks@lanhc-canary-agent (smartctl not installed)`，而不是静默跳过。
   在该宿主 `apt install smartmontools` 后即可开始上报该节点的磁盘指标。
+- 生产 baizor 宿主的 `lanhc-agent-host` 容器同日升到 `20261004`（内含
+  `1.102.5+lanhc12` 二进制与 `smartctl`），4 块 MegaRAID 物理盘均可枚举。
 
 ## 6. 验证验收（R930 场景）
 
@@ -356,7 +359,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | --- | --- |
 | `lanhc-ops-runner` | `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004` |
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
-| `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261003` |
+| `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
 | `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004` |
 
