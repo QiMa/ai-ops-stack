@@ -6,7 +6,7 @@
 #   docker compose up -d --build
 #
 # 组件：
-#   lanhc-hub   控制台 + ai-ops API（管理端口 3081 -> 81）
+#   hs-console   控制台 + ai-ops API（管理端口 3081 -> 81）
 #   ops-runner  Codex worker（内置 Codex CLI + mcp-lanhc，消费 ai_ops_run 队列）
 #
 # 说明：
@@ -18,9 +18,9 @@
 services:
   hub:
     build:
-      context: ../lanhc-hub
+      context: ../hs-console
       dockerfile: docker/Dockerfile
-    image: lanhc-hub:aiops-local
+    image: hs-console:aiops-local
     container_name: ai-ops-hub
     restart: unless-stopped
     ports:
@@ -54,6 +54,10 @@ services:
       AIOPS_POLL_INTERVAL_MS: ${AIOPS_POLL_INTERVAL_MS:-15000}
       AIOPS_STALE_RUN_MS: ${AIOPS_STALE_RUN_MS:-600000}
       AIOPS_REAP_ANY: ${AIOPS_REAP_ANY:-0}
+      AIOPS_TELEMETRY_ENABLED: ${AIOPS_TELEMETRY_ENABLED:-0}
+      AIOPS_TELEMETRY_INTERVAL_MS: ${AIOPS_TELEMETRY_INTERVAL_MS:-900000}
+      AIOPS_TELEMETRY_NODES: ${AIOPS_TELEMETRY_NODES:-}
+      AIOPS_TENANT_ID: ${AIOPS_TENANT_ID:-1}
       CODEX_BIN: ${CODEX_BIN:-codex}
       CODEX_BASE_URL: ${CODEX_BASE_URL:-https://baizor.com/v1}
       CODEX_WIRE_API: ${CODEX_WIRE_API:-responses}

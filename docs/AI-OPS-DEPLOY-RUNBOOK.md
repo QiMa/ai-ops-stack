@@ -1,6 +1,6 @@
 # lanhc AI-Ops 部署 Runbook
 
-> 目标：把 `lanhc` + `headscale` + `lanhc-hub` + `mcp-lanhc` + `ops-runner` 的
+> 目标：把 `lanhc` + `headscale` + `hs-console` + `mcp-lanhc` + `ops-runner` 的
 > AI-Ops 能力部署到真实环境。R930 二手盘这类“退化型”故障是首要验收场景。
 
 ## 0. 组件清单
@@ -10,7 +10,7 @@
 | `lanhc-agent` | `lanhc/cmd/lanhc-agent` | 随 lanhc 构建 | 每台被管设备 |
 | `mcp-lanhc` | `mcp-lanhc/` | `git@github.com:QiMa/mcp-lanhc.git` | ops-runner |
 | `ops-runner` | `ops-runner/` | `git@github.com:QiMa/ops-runner.git` | 控制面（独立容器/VM） |
-| `lanhc-hub ai-ops` | `lanhc-hub/backend` | lanhc-hub 主仓库 | hub 容器 |
+| `hs-console ai-ops` | `hs-console/backend` | hs-console 主仓库 | hub 容器 |
 | 一键栈 | `ai-ops-stack/` | `git@github.com:QiMa/ai-ops-stack.git`（待建仓） | 本地/小规模闭环（hub + ops-runner） |
 
 ## 0.5 最快路径：一键栈（本地/小规模闭环）
@@ -42,7 +42,7 @@ docker compose run --rm --no-deps ops-runner node /workspace/ops-runner/worker/w
 
 - headscale 已运行，且有只读 API key（`/apikey` 可访问）。
 - 每台设备已安装 `lanhc`（或 lanhcd），并已加入 tailnet。
-- `lanhc-hub` 已部署，headscale instance + tenant 已配好。
+- `hs-console` 已部署，headscale instance + tenant 已配好。
 - 控制面有一个可访问 iDRAC 的网络路径（带外）。
 - `ops-runner` 所在节点已安装 Codex CLI 与 Node 22。
 
@@ -169,14 +169,14 @@ node worker/worker.js                  # 常驻轮询
 
 生产可用 systemd 常驻，或放到单实例调度。
 
-## 4. lanhc-hub：`ai-ops`
+## 4. hs-console：`ai-ops`
 
 ### 4.1 数据库迁移
 
 部署新镜像时自动跑 `migrate.latest()`；若手动：
 
 ```bash
-cd /home/dev/src/lanhc-hub/backend
+cd /home/dev/src/hs-console/backend
 node migrate.js
 ```
 
@@ -222,9 +222,25 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry/rules \
 建议再加：`smart.current_pending_sector > 10`、
 `smart.udma_crc_error_count > 100`、`smart.temperature_c > 60`。
 
+> 2026-10-03 起规则必须带 `node_name` 才能按设备过滤（迁移
+> `20261003000002_ai_ops_telemetry_node_name.js` 已修）；worker 上报时也会带
+> `node_name`。生产已建 `smart.power_on_hours > 60000` 验证规则（incident 6）。
+
 ### 5.3 样本上报
 
-设备侧 agent 定时把 SMART 关键属性推给 hub（示例）：
+生产由 `ops-runner` 定时采集，不用 agent 自己推：worker 每
+`AIOPS_TELEMETRY_INTERVAL_MS`（默认 900000ms）对 `tag:lanhc-agent` 节点依次
+`agent_disks` → `agent_smart`，再把每个盘的关键属性归组推给 hub：
+
+- 采集指标：`smart.reallocated_sectors` / `power_on_hours` / `temperature_c` /
+  `current_pending_sector` / `offline_uncorrectable` / `udma_crc_error_count`。
+- 配置：`AIOPS_TELEMETRY_ENABLED=1`、`AIOPS_TELEMETRY_INTERVAL_MS`、
+  `AIOPS_TELEMETRY_NODES`（留空 = 所有 agent 节点）、`AIOPS_TENANT_ID`。
+- 手动补一发：容器内 `node worker/worker.js --telemetry`。
+- 生产验证：2026-10-04 已上线 `lanhc-ops-runner:20261004`，
+  `[worker] telemetry push: nodes=2 samples=21 pushed=21`。
+
+Hub 的 `POST /api/ai-ops/telemetry` 也可手工调用（异常排查用）：
 
 ```bash
 curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
@@ -233,6 +249,9 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
         {"metric":"smart.reallocated_sectors","value":148},
         {"metric":"smart.temperature_c","value":44}]}'
 ```
+
+已知限制：老版本 `lanhc-agent` 没有 `/v1/disk/list`，`agent_disks` 会返回
+`404 page not found`；该节点如实记入 collection failures，升级 agent 后恢复。
 
 ## 6. 验证验收（R930 场景）
 

@@ -1,13 +1,13 @@
 # lanhc AI-Ops 一键部署栈
 
-- `hub`：lanhc-hub 控制台 + ai-ops API，管理端口 `3081`。
+- `hub`：hs-console 控制台 + ai-ops API，管理端口 `3081`。
 - `ops-runner`：Codex worker，镜像内置 Codex CLI 与 mcp-lanhc，消费 hub 的 `ai_ops_run` 队列。
 
 ## 前置条件
 
-- 已构建过前端静态资源（hub 镜像会 COPY `lanhc-hub/frontend/dist`）：
+- 已构建过前端静态资源（hub 镜像会 COPY `hs-console/frontend/dist`）：
   ```bash
-  cd /home/dev/src/lanhc-hub/frontend
+  cd /home/dev/src/hs-console/frontend
   NODE_OPTIONS=--openssl-legacy-provider yarn build
   ```
 - 已有可访问的 headscale，并准备只读 API key。
@@ -67,7 +67,7 @@ cd /home/dev/src/ai-ops-stack
 会依次产出同一 TAG：
 
 - `ccr.ccs.tencentyun.com/lucky/headscale:20261004`
-- `ccr.ccs.tencentyun.com/lucky/headscale-ui:20261004`
+- `ccr.ccs.tencentyun.com/lucky/hs-console:20261004`
 - `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004`
 - `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004`
 - `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261004`
@@ -75,7 +75,7 @@ cd /home/dev/src/ai-ops-stack
 单产品发版直接进对应仓库：
 
 ```bash
-./deploy/build-push.sh <TAG> [--push]     # lanhc-hub / headscale / ops-runner / lanhc-hugo
+./deploy/build-push.sh <TAG> [--push]     # hs-console / headscale / ops-runner / lanhc-hugo
 ./deploy/build-push.sh [<TAG>] [--no-upload]  # lanhc（发行包发布，默认自动递增 +lanhcN）
 ```
 
@@ -96,5 +96,7 @@ cd /home/dev/src/ai-ops-stack
 - `ops-runner` 镜像内置 Codex CLI（默认 `@openai/codex@0.159.3`）和
   `mcp-lanhc`，不再从宿主机挂载源码；如需改版本，改 `ops-runner/Dockerfile` 的
   `CODEX_VERSION`。
+- SMART 遥测默认关闭；置 `AIOPS_TELEMETRY_ENABLED=1` 后 worker 会定时采集
+  agent 节点磁盘指标并推给 hub（详情见 `docs/AI-OPS-DEPLOY-RUNBOOK.md` 5.3）。
 - headscale / lanhc-agent 不在本栈内，需要已有 tailnet。
 - 生产多副本：只让一个 hub 开 `AIOPS_SCHEDULER=1`。

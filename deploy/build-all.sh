@@ -6,7 +6,7 @@
 #
 # 依次调用各产品仓库的 deploy/build-push.sh：
 #   headscale         -> ccr.ccs.tencentyun.com/lucky/headscale:TAG
-#   lanhc-hub         -> ccr.ccs.tencentyun.com/lucky/headscale-ui:TAG
+#   hs-console        -> ccr.ccs.tencentyun.com/lucky/hs-console:TAG
 #   ops-runner        -> ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:TAG
 #                        ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:TAG
 #                        ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:TAG
@@ -40,7 +40,7 @@ PUSH_ARG=""
 
 set -x
 "$SRC_ROOT/headscale/deploy/build-push.sh" "$TAG" $PUSH_ARG
-"$SRC_ROOT/lanhc-hub/deploy/build-push.sh" "$TAG" $PUSH_ARG
+"$SRC_ROOT/hs-console/deploy/build-push.sh" "$TAG" $PUSH_ARG
 
 RUNNER_ARGS=("$TAG")
 [ -n "$PUSH_ARG" ] && RUNNER_ARGS+=("$PUSH_ARG")
