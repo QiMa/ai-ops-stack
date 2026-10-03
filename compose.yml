@@ -52,6 +52,8 @@ services:
       AIOPS_WORKER_ID: ai-ops-runner-01
       AIOPS_MODEL: ${AIOPS_MODEL:-huayu-v2}
       AIOPS_POLL_INTERVAL_MS: ${AIOPS_POLL_INTERVAL_MS:-15000}
+      AIOPS_STALE_RUN_MS: ${AIOPS_STALE_RUN_MS:-600000}
+      AIOPS_REAP_ANY: ${AIOPS_REAP_ANY:-0}
       CODEX_BIN: ${CODEX_BIN:-codex}
       CODEX_BASE_URL: ${CODEX_BASE_URL:-https://baizor.com/v1}
       CODEX_WIRE_API: ${CODEX_WIRE_API:-responses}
