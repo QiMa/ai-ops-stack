@@ -254,8 +254,24 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry/rules \
   `20261004000001_ai_ops_alert_rule_cooldown.js`）：静态阈值（如
   `power_on_hours`）永远为真，人工解决后必须等冷却期结束才会再次开单；
   设 `0` 关闭冷却。证据里会带 `rule_id`，用来判定"同一条规则"。
+- 去重按 **(rule, node)**：同一块退化盘可以同时触发
+  `reallocated_sectors > 0` 和 `power_on_hours > 60000` 两条规则，各开一单。
 - 离线/过期类 incident 会在节点恢复在线时由 `scan-offline-expired`
   自动置为 `resolved`（summary = 节点已恢复在线），不再长期挂 `open`。
+
+生产规则集（tenant 1，2026-10-04 上线）：
+
+| id | metric | 条件 | severity | cooldown |
+| --- | --- | --- | --- | --- |
+| 1 | smart.power_on_hours | gt 60000 | p2 | 86400 |
+| 2 | smart.reallocated_sectors | gt 0 | p2 | 86400 |
+| 3 | smart.current_pending_sector | gt 0 | p1 | 86400 |
+| 4 | smart.offline_uncorrectable | gt 0 | p1 | 86400 |
+| 5 | smart.udma_crc_error_count | gt 50 | p3 | 86400 |
+| 6 | smart.temperature_c | gt 55 | p3 | 3600 |
+
+当前 baizor 四块 MegaRAID 盘退化计数均为 0，因此 2–6 静默；一旦出现坏道
+重映射/待映射扇区会立即开单，`power_on_hours` 作为二手盘年龄提醒单独存在。
 
 ### 5.3 样本上报
 
@@ -370,7 +386,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-3` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-4` |
 
 设备识别增强：
 
