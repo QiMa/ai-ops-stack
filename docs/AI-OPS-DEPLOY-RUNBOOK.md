@@ -233,6 +233,14 @@ curl -X POST https://console.lanhc.com/api/ai-ops/notifications/rules \
 支持的事件：`incident_created` / `incident_resolved` / `action_pending` /
 `action_executed` / `ai_finished`。
 
+- `incident_created` 在 manual、offline/expiry、telemetry 异常三类创建路径都会触发；
+  `incident_resolved` 在人工 resolve/close 与节点恢复自动解决时都会触发。
+- 规则 API：`POST /ai-ops/notifications/rules` 建规则，
+  `POST /ai-ops/notifications/test` 先探活。生产联调用
+  `http://hook-catcher:18081/hook` 在 `baizor-bridge` 网络内已验证三链路。
+- 目标地址不能写宿主 LAN IP：生产 worker/hub 在 Docker bridge 内，跨到宿主
+  网关/物理网卡出站会被安全策略阻断；同 network 内用容器名即可。
+
 ### 5.2 SMART 告警规则（R930 二手盘）
 
 ```bash
@@ -386,7 +394,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-4` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-6` |
 
 设备识别增强：
 
