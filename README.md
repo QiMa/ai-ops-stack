@@ -47,6 +47,40 @@ docker compose run --rm --no-deps ops-runner node /workspace/ops-runner/worker/w
 - **run 卡在 running**：`AIOPS_STALE_RUN_MS`（默认 10 分钟）会自动回收；
   单机部署可设 `AIOPS_REAP_ANY=1` 连其它 worker 的遗留 run 一起收。
 
+## 发布（固定版本号）
+
+全栈镜像统一用日期式 TAG（如 `20261004`），一条命令出全量 tag：
+
+```bash
+cd /home/dev/src/ai-ops-stack
+
+# 本地构建，不推送（全部打 :local 别名，先 compose 验收）
+./deploy/build-all.sh 20261004
+
+# 构建并推送五个 CCR 镜像
+./deploy/build-all.sh 20261004 --push
+
+# agent/sidecar 需要 lanhc 发行包时，从 tar.gz 自动取二进制
+./deploy/build-all.sh 20261004 --push --release /home/dev/out/lanhc/lanhc_linux_amd64.tar.gz
+```
+
+会依次产出同一 TAG：
+
+- `ccr.ccs.tencentyun.com/lucky/headscale:20261004`
+- `ccr.ccs.tencentyun.com/lucky/headscale-ui:20261004`
+- `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004`
+- `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004`
+- `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261004`
+
+单产品发版直接进对应仓库：
+
+```bash
+./deploy/build-push.sh <TAG> [--push]     # lanhc-hub / headscale / ops-runner / lanhc-hugo
+./deploy/build-push.sh [<TAG>] [--no-upload]  # lanhc（发行包发布，默认自动递增 +lanhcN）
+```
+
+`build-all.sh` 只是编排层，不重复定义构建参数；默认 `SRC_ROOT=/home/dev/src`。
+
 ## 命名
 
 - 控制台：`Lanhc AI Console` / 蓝核AI智控台
