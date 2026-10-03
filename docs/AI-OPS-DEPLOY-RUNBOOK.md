@@ -471,6 +471,43 @@ docker compose up -d
 - 2026-10-04 修 worker：SSD 缺 194 时回退顶层 temperature，否则温度规则
   对三星这类盘永不生效。
 
+## 6.10 2026-10-04 sg-W780-G20 从官方 tailscale 迁移到 lanhc
+
+`112.48.30.202`（hostname `sg-W780-G20`）原装官方 Tailscale 1.102.4
+（node ID 3，`100.64.0.3`）。目标是换成最新 `lanhc` 1.102.5+lanhc12，
+且保留原节点身份，避免重新走浏览器登录。
+
+迁移方法（已在生产执行）：
+
+1. 下载稳定别名包 `https://lanhc.com/lanhc/lanhc_linux_amd64.tar.gz`
+   （`1.102.5+lanhc12`），解包到临时目录。
+2. 通过特权容器进入宿主 namespace（宿主 `lucky` 无免密 sudo，但 `docker`
+   组可用）：
+   ```bash
+   docker run --rm --privileged --pid=host -v /:/host -v /tmp:/tmp:ro      --entrypoint sh ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004      -c "nsenter -t 1 -m -u -i -n -p -- sh /tmp/lanhc-migrate.sh"
+   ```
+3. 迁移脚本：
+   - `systemctl disable --now tailscaled.service` 并 `pkill tailscaled`；
+   - `install` 二进制 `/usr/sbin/lanhcd`、`/usr/bin/lanhc` 与 systemd 单元；
+   - `cp -a /var/lib/tailscale/. /var/lib/lanhc/`，随后
+     `mv tailscaled.state lanhcd.state`（内容同构，沿用 node ID 3）；
+   - `apt-get -y remove tailscale tailscale-archive-keyring`
+     （`remove` 不 purge，官方状态目录保留，删除 `tailscale.list`）；
+   - `systemctl enable --now lanhcd`，等待 `BackendState=Running`。
+4. 回滚：`/root/lanhc-migrate/tailscale-state-*.bak` 保留完整原始状态，
+   如需回退官方客户端，重装官方包后把备份放回 `/var/lib/tailscale/` 即可。
+
+结果：
+
+- tailnet node 3 仍为 `sg-W780-G20` / `100.64.0.3`，online，无需重新登录。
+- `lanhcd.service` enabled/active，`lanhc version` 为 `1.102.5+lanhc12`。
+- 官方 `tailscaled`/`tailscale` 二进制已移除；`/var/lib/tailscale` 保留作回滚证据。
+- 同机 `sg4028-agent` 容器未受影响，`agent_health` 返回 ok。
+- 发现并修复安装脚本缺口：`lanhc.sh` 之前定义了 `stop_legacy_tailscale` 但
+  未调用，也无状态迁移逻辑；已在 `hs-console/scripts/install/lanhc.sh` 补齐
+  调用与 `migrate_legacy_state()`。后续新机器可直接
+  `curl -fsSL https://lanhc.com/lanhc/lanhc.sh | bash` 完成同类迁移。
+
 ## 7. 回滚与安全
 
 - 全部 AI 组件都是增量部署：关掉 `ops-runner` worker 即回到人工运维。
