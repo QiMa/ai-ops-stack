@@ -35,6 +35,23 @@ docker compose logs -f ops-runner
 docker compose run --rm --no-deps ops-runner node /workspace/ops-runner/worker/worker.js --self-test
 ```
 
+## 常见坑（2026-10-03 联调）
+
+- **模型请求全部失败 / 一直转圈**：`node:*-slim` 基础镜像没有 `/etc/ssl/certs`，
+  Codex（rustls）会只报 `error sending request`。`ops-runner/Dockerfile` 已安装
+  `ca-certificates`，自定义镜像务必保留。
+- **诊断内容像是 shell 文本**：说明 worker 没取到最后一条 `agent_message`。
+  现在由 `worker/collect.js` 先取证、`worker/lib.js` 只解析 `agent_message`。
+- **改凭据后没生效**：`codex-home` 是持久化 volume，worker 每次启动都会重写
+  `[mcp_servers.lanhc.env]`。若仍异常，可 `docker compose down -v` 后重建。
+- **run 卡在 running**：`AIOPS_STALE_RUN_MS`（默认 10 分钟）会自动回收；
+  单机部署可设 `AIOPS_REAP_ANY=1` 连其它 worker 的遗留 run 一起收。
+
+## 命名
+
+- 控制台：`Lanhc Console` / 蓝核控制台
+- AI 模块：`Lanhc Sentinel` / 蓝核哨兵（路由仍是 `/ai-ops/*`）
+
 ## 注意
 
 - `AIOPS_HUB_URL=http://hub:3000` 是容器内网地址；直连后端端口 3000，
