@@ -358,7 +358,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261003` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261003-2` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004` |
 
 设备识别增强：
 
@@ -417,6 +417,9 @@ curl -sS -X POST https://console.lanhc.com/api/ai-ops/incidents/3/investigate   
   `CODEX_HOME` 的 config 已注册 `mcp-lanhc`。
 - **扫描报权限**：调度器 token 必须是 admin scope。
 - **SQLite 批量写入报错**：遥测已改为逐条写入，见 `internal/ai-ops/telemetry.js`。
+- **遥测表持续变大**：调度器每天跑 `prune-telemetry`，默认保留 90 天；
+  也可手工 `POST /api/ai-ops/telemetry/prune`。保留天数用
+  `AIOPS_TELEMETRY_RETENTION_DAYS` 覆盖，间隔用 `AIOPS_PRUNE_INTERVAL_MS`。
 - **agent 工具报 `EAI_AGAIN`**：runner 容器内解析不了 MagicDNS。检查
   `LANHC_AGENT_PROXY` 是否指向 sidecar，以及 sidecar 是否已 `lanhc status` 上线。
 - **sidecar 一直 `Logged out`**：`TS_AUTHKEY` 无效或已被使用；重新签发
