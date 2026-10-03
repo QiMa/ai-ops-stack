@@ -1,6 +1,6 @@
 # lanhc-agent 生产金丝雀上线 Runbook
 
-适用：把 `lanhc-agent` 部署到生产设备（首个试点建议 R930），接入 `Lanhc Console` /
+适用：把 `lanhc-agent` 部署到生产设备（首个试点建议 R930），接入 `Lanhc AI Console` /
 `Lanhc Sentinel` 的只读取证链路。
 
 配套文档：`AI-OPS-DEPLOY-RUNBOOK.md`（全栈）、`lanhc/cmd/lanhc-agent/README.md`（组件）。

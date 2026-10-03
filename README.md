@@ -49,7 +49,7 @@ docker compose run --rm --no-deps ops-runner node /workspace/ops-runner/worker/w
 
 ## 命名
 
-- 控制台：`Lanhc Console` / 蓝核控制台
+- 控制台：`Lanhc AI Console` / 蓝核AI智控台
 - AI 模块：`Lanhc Sentinel` / 蓝核哨兵（路由仍是 `/ai-ops/*`）
 
 ## 注意

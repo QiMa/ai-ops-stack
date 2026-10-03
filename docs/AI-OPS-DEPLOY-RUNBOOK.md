@@ -288,7 +288,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
   缺 key 时 worker 直接失败，不再空转到 600s 超时。
 - **卡死 run 回收**。`AIOPS_STALE_RUN_MS`（默认 10 分钟）把超时仍 `running` 的
   run 标记 `failed`；`AIOPS_REAP_ANY=1` 时也回收其它 worker 的遗留 run。
-- **命名**：控制台 = `Lanhc Console` / 蓝核控制台；AI 模块 = `Lanhc Sentinel` /
+- **命名**：控制台 = `Lanhc AI Console` / 蓝核AI智控台；AI 模块 = `Lanhc Sentinel` /
   蓝核哨兵，路由仍在 `/ai-ops/*`。
 
 关键坑：
