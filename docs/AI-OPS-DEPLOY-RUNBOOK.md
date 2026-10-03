@@ -437,6 +437,40 @@ curl -sS -X POST https://console.lanhc.com/api/ai-ops/incidents   -H "Authorizat
 curl -sS -X POST https://console.lanhc.com/api/ai-ops/incidents/3/investigate   -H "Authorization: Bearer $HUB_TOKEN" -H 'Content-Type: application/json' -d '{"run_kind":"manual"}'
 ```
 
+## 6.9 2026-10-04 超微 4028（sg4028-agent）接入
+
+`112.48.30.202`（hostname `sg-W780-G20`）是 80C/94GB 的 SATA 单盘主机，
+盘为 Samsung 870 QVO 1TB（无 RAID、无 PERC）。用容器形态 agent 接入，不装
+systemd 单元、不重装已有 `tailscaled`：
+
+```bash
+# 控制面：给用户 lucky 签发一次性 tagged key
+curl -X POST https://headscale.lanhc.com/api/v1/preauthkey \
+  -H "Authorization: Bearer $HSKEY" -H 'Content-Type: application/json' \
+  -d '{"user":"1","reusable":false,"ephemeral":false,
+       "expiration":"2026-10-05T00:00:00Z","aclTags":["tag:lanhc-agent"]}'
+
+# 目标机（112.48.30.202，lucky 已在 docker 组）
+mkdir -p /lucky/lanhc-agent
+docker pull ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004
+# compose：挂 /dev/sda + /dev/sg0，command -hostname sg4028-agent
+docker compose up -d
+
+# 注册成功后再删掉 compose 里的 TS_AUTHKEY（状态目录已持久化节点身份）
+docker compose up -d
+```
+
+结果：
+
+- tailnet node 15 `sg4028-agent`，`tag:lanhc-agent`，online。
+- `agent_health` / `agent_disks`（`/dev/sda -d sat`）/ `agent_smart` 全部 200。
+- SMART：`reallocated=0`、`POH=4732`、`udma_crc=0`；SSD 温度走
+  `smart.temperature.current`（27℃），没有 ATA 194 属性。
+- 遥测已上报 `smart.{power_on_hours,reallocated_sectors,udma_crc_error_count,
+  temperature_c}`；所有生产规则当前静默。
+- 2026-10-04 修 worker：SSD 缺 194 时回退顶层 temperature，否则温度规则
+  对三星这类盘永不生效。
+
 ## 7. 回滚与安全
 
 - 全部 AI 组件都是增量部署：关掉 `ops-runner` worker 即回到人工运维。
