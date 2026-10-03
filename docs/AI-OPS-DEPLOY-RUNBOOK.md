@@ -146,6 +146,7 @@ cp .env.example .env
 ```bash
 HEADSCALE_URL=https://headscale.lanhc.com
 HEADSCALE_API_KEY=<只读 API key>
+LANHC_AGENT_PROXY=socks5://ai-ops-tailnet:1080  # 生产 runner 容器必配
 REDFISH_URL=https://idrac.lanhc
 REDFISH_USER=<只读账号>
 REDFISH_PASSWORD=<密码>
@@ -168,6 +169,27 @@ node worker/worker.js                  # 常驻轮询
 ```
 
 生产可用 systemd 常驻，或放到单实例调度。
+
+### 3.4 生产 tailnet sidecar（必配）
+
+`ops-runner` 容器没有 tailnet 网卡，容器内 MagicDNS 不可用。生产必须在
+`ops-runner` 旁起 `ai-ops-tailnet` sidecar，把 tailnet 的 SOCKS5 出站代理
+提供给 runner。编排与构建脚本在 `ops-runner/deploy/tailnet-sidecar/`。
+
+要点：
+
+- `lanhcd --tun=userspace-networking --socks5-server=0.0.0.0:1080`
+- `TS_AUTHKEY` 必须是 `tag:ai-ops-runner` 的 preauthkey；状态目录要持久化
+- runner 环境变量 `LANHC_AGENT_PROXY=socks5://ai-ops-tailnet:1080`
+- `HEADSCALE_URL` 负责把 `<node>-agent` 解析成 `100.x`，SOCKS5 只做 TCP 通道
+
+验证：
+
+```bash
+docker exec ai-ops-tailnet lanhc status
+docker exec ai-ops-runner node -e "fetch('http://ai-ops-tailnet:1080').catch(e=>console.log(e.message))"
+# 或直接看 runner 内 agent_* 工具是否返回 inventory/health
+```
 
 ## 4. hs-console：`ai-ops`
 
@@ -315,8 +337,63 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 - **preauth key 已是 tagged** 时，客户端不要再请求同一 tag：headscale v0.29 会拒绝
   `requested tags [...] are invalid or not permitted`。`lanhc-agent` 默认
   `-tags` 为空，tag 由 preauthkey 下发；若确实要手动指定，两边不要重复。
-- WSL 里 `tsnet`/`lanhcd` 用 `--tun=userspace-networking`；同机访问另一节点
-  `100.64.x.y` 需走 SOCKS5 转发，生产环境由真实 TUN 直接路由，不涉及此限制。
+- 无 TUN 的环境（WSL、以及**没有 tailnet 网卡的 runner 容器**）必须用
+  `--tun=userspace-networking`，访问另一节点 `100.64.x.y` 需走 SOCKS5 转发。
+  生产 runner 容器同样属于这一类，故固定搭配 `ai-ops-tailnet` sidecar
+  （见 §3.4）；只有宿主机装了 `lanhcd` 且带真实 TUN 时才可直连。
+
+### 6.8 2026-10-03 CCR 镜像化 + 设备识别增强（已验收）
+
+全部生产组件改为从腾讯云 CCR 拉取，不再依赖宿主机手动 `docker load`：
+
+| 镜像 | Registry |
+| --- | --- |
+| `lanhc-ops-runner` | `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004` |
+| `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
+| `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261003` |
+| `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261003-2` |
+
+设备识别增强：
+
+- headscale 新增受 API key 保护的 `GET /api/v1/nodeinfo`，把 `Hostinfo`
+  里的 OS / 发行版 / container / client package / arch 摘出（避免泄漏原始字段）。
+- console `/api/headscale/:id/devices` 自动合并 `hostInfo`；失败时降级为 v1 字段。
+- 前端设备卡片显示 `Platform`、`container/host` 徽章和 client/host 信息。
+- 这样 `lanhc-ops-runner`、`lanhc-agent` 能明确标为容器，
+  `DESKTOP-QUNGQK7` 显示 Windows host，canary agent 显示 Ubuntu 24.04 tsnet。
+
+发布方式：
+
+```bash
+docker compose -f docker-compose.yml up -d       # headscale + console
+docker compose -f docker-compose.aiops.yml up -d # runner + tailnet + host agent
+```
+
+### 6.7 2026-10-03 生产 tailnet E2E（已验收）
+
+生产链路已跑通，不再是「本地模拟」：
+
+| 环节 | 结果 |
+| --- | --- |
+| 控制台命名 | `Lanhc AI Console / 蓝核AI智控台`，AI 模块 `Lanhc Sentinel / 蓝核哨兵` |
+| 生产 hub | `/api/ai-ops/incidents` 200，调度器 `scan-offline-expired ok` |
+| 生产 runner | `lanhc-ops-runner:prod` 常驻轮询 `http://lanhc-console:3000` |
+| tailnet sidecar | `lanhc-ops-runner`（100.64.0.8，tag:ai-ops-runner）online |
+| 设备 agent | `DESKTOP-QUNGQK7-agent`（100.64.0.6，tag:lanhc-agent）online |
+| 端到端 | incident 3 → investigate → agent_triage 成功 → diagnosis 回写 |
+| Redfish | 未配 `REDFISH_*`，bmc_triage 如实失败，属 P2 待办 |
+
+生产验证命令：
+
+```bash
+# headscale 节点
+curl -sS https://headscale.lanhc.com/api/v1/node -H "Authorization: Bearer $HSKEY"
+
+# 建事件 + 调查
+curl -sS -X POST https://console.lanhc.com/api/ai-ops/incidents   -H "Authorization: Bearer $HUB_TOKEN" -H 'Content-Type: application/json'   -d '{"tenant_id":1,"instance_id":1,"node_id":"11","node_name":"lanhc-canary-agent","title":"生产联调","severity":"p3","source":"manual"}'
+curl -sS -X POST https://console.lanhc.com/api/ai-ops/incidents/3/investigate   -H "Authorization: Bearer $HUB_TOKEN" -H 'Content-Type: application/json' -d '{"run_kind":"manual"}'
+```
 
 ## 7. 回滚与安全
 
@@ -334,3 +411,10 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
   `CODEX_HOME` 的 config 已注册 `mcp-lanhc`。
 - **扫描报权限**：调度器 token 必须是 admin scope。
 - **SQLite 批量写入报错**：遥测已改为逐条写入，见 `internal/ai-ops/telemetry.js`。
+- **agent 工具报 `EAI_AGAIN`**：runner 容器内解析不了 MagicDNS。检查
+  `LANHC_AGENT_PROXY` 是否指向 sidecar，以及 sidecar 是否已 `lanhc status` 上线。
+- **sidecar 一直 `Logged out`**：`TS_AUTHKEY` 无效或已被使用；重新签发
+  `tag:ai-ops-runner` 的 preauthkey 后清空状态目录重启。
+- **agent 节点匹配不到**：以 notifier 里 `node_name` 为 `givenName` 搜索
+  `<givenName>-agent`；`DESKTOP-QUNGQK7-agent` 的 `givenName` 是
+  `lanhc-canary-agent`。
