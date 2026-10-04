@@ -578,3 +578,30 @@ docker compose up -d
 - **agent 节点匹配不到**：以 notifier 里 `node_name` 为 `givenName` 搜索
   `<givenName>-agent`；`DESKTOP-QUNGQK7-agent` 的 `givenName` 是
   `lanhc-canary-agent`。
+
+### 8.1 2026-10-04 控制台登录循环（已修复）
+
+现象：`https://console.lanhc.com/login` 输入正确口令后闪回登录页，浏览器
+`localStorage` 里的会话不被识别。
+
+根因与修复（`hs-console` 提交 `3ea96f5`、`a269c33`）：
+
+1. token 本地存储 key 从 `lanhc-hub-tokens` 改名为 `hs-console-tokens` 时没有做
+   旧 key 回退，升级后所有已登录浏览器都读到空 token。现在 `tokens.js` 会依次回退
+   `hs-console-tokens` → `lanhc-hub-tokens` → `nginx-proxy-manager-tokens`。
+2. 前端资源在 NPM 上是 `immutable` 长缓存，但 bundle URL 只带语义版本号
+   （`?v=1.0.15`），新镜像发不出新文件。现在 `deploy/build-push.sh` 会把发布 tag
+   作为 `BUILD_TAG` 传给 webpack，bundle URL 变成 `?v=<tag>`，每版唯一。
+3. `/`、`/login`、`/index.html`、`/login.html` 已在容器内 nginx 标记
+   `no-store`，只有静态资源继续长缓存。
+
+排障要点：改完 nginx 配置必须确认 `deploy/Dockerfile` 会 `COPY docker/rootfs /`
+（增量镜像），否则容器里的 `production.conf` 仍是上一版。
+
+### 8.2 设备卡片展示磁盘健康（已上线）
+
+`/headscale/devices` 现在把 `ai_ops_telemetry` 的 `smart.*` 指标按 headscale
+`node_id` 关联到设备卡片，展示每块盘的型号、通电小时、温度与
+reallocated/pending/offline 计数；`reallocated_sectors` 等大于 0 时直接标红，
+并在通电时长 ≥ 3 年时提示“二手风险”。这正是 R930 掉线复盘里“买到翻新盘”的
+定位手段。
