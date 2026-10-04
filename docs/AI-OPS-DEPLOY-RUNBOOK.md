@@ -406,6 +406,24 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 - 记：GPU 容器必须用 NVIDIA runtime（或 `--gpus`），只挂 `/dev/nvidia*`
   不足以让 `nvidia-smi` 找到驱动库。
 
+## 6.7 Windows 节点接入（gengbao / 100.64.0.4）
+
+`100.64.0.4` 是 Windows 10（`DESKTOP-HUPNLL6`），控制台显示名已改为
+`gengbao`。Windows 节点没有 systemd，采用 `lanhc-agent.exe` + 计划任务：
+
+```powershell
+Invoke-WebRequest https://lanhc.com/lanhc/lanhc-agent-windows-amd64.zip -OutFile $env:TEMP\lanhc-agent.zip
+Expand-Archive $env:TEMP\lanhc-agent.zip $env:TEMP\lanhc-agent
+Set-Location $env:TEMP\lanhc-agent
+$env:TS_AUTHKEY='hskey-auth-...'
+powershell -ExecutionPolicy Bypass -File .\install-lanhc-agent.ps1
+```
+
+- 安装包：`lanhc-agent-windows-amd64.zip`（已上传 `/lucky/lanhc-hugo/lanhc/`，
+  公开路径 `https://lanhc.com/lanhc/lanhc-agent-windows-amd64.zip`）。
+- 首次上线需带 `tag:lanhc-agent` 的 preauthkey；同一 key 可复用。
+- 当前只生成了 72h 有效期 key，需在 gengbao 上执行并确认注册后即完成接入。
+
 ## 6. 验证验收（R930 场景）
 
 1. 设备掉线 → hub 调度器扫出 `offline` incident，P2 通知到 webhook。
