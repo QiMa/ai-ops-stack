@@ -366,6 +366,25 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 - 生产 baizor 宿主的 `lanhc-agent-host` 容器同日升到 `20261004`（内含
   `1.102.5+lanhc12` 二进制与 `smartctl`），4 块 MegaRAID 物理盘均可枚举。
 
+## 6.5 2026-10-04 运营化闭环（P0→P4）
+
+本轮把「遥测采集失败可见、设备可辨识、物理盘可告警、通知可核验、带外如实
+记录」串成一条可直接验收的运营闭环。
+
+- 镜像 pin：`hs-console:20261004-18`、`lanhc-ops-runner:20261004-18`。
+- P0：新增 `ai_ops_telemetry_failure` 表与
+  `GET/POST /api/ai-ops/telemetry/failures`；`ops-runner` 每轮把 failures
+  上报 hub；遥测页显示采集异常。金丝雀当前显示 6 条 `/dev/sda..sdf
+  (exit status 2)` + 1 条 `no SMART samples collected for host`。
+- P1：设备卡显示 WSL2 徽标、容器/宿主标识、采集异常原因、物理盘型号/S/N/
+  SMART 关键值；无 SMART 样本不再静默。
+- P2：告警规则校正为 `reallocated_sectors|current_pending_sector|
+  offline_uncorrectable > 0 → p1`、`udma_crc_error_count > 0 → p3`、
+  `temperature_c > 55 → p3`，node_filter `*`；WSL2 无样本不误报。
+- P3：企业微信 webhook 已实收（`errcode:0`），通知记录页显示 `sent/200`。
+- P4：生产 LAN 内 `192.168.100.202/.203` 为 Web Switch 管理口，非 Redfish；
+  真实 BMC 未接入。`mcp-lanhc` 在缺凭据时返回结构化错误，不伪造带外证据。
+
 ## 6. 验证验收（R930 场景）
 
 1. 设备掉线 → hub 调度器扫出 `offline` incident，P2 通知到 webhook。
