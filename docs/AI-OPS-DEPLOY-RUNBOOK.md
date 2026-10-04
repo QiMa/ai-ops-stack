@@ -233,6 +233,20 @@ curl -X POST https://console.lanhc.com/api/ai-ops/notifications/rules \
 支持的事件：`incident_created` / `incident_resolved` / `action_pending` /
 `action_executed` / `ai_finished`。
 
+通知 channel 已内置三类国内 IM 机器人适配器（`hs-console:20261004-7` 上线）：
+
+- `wecom`：企业微信群机器人，`markdown`
+  `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx`
+- `feishu`：飞书自定义机器人，`text`
+  `https://open.feishu.cn/open-apis/bot/v2/hook/xxx`
+- `dingtalk`：钉钉机器人，`markdown`
+  `https://oapi.dingtalk.com/robot/send?access_token=xxx`
+  （若设置「加签」，把签名字符串作为 `secret` 查询参数附在 target 末尾，
+  notifier 会自动补 `timestamp/sign` 并从 URL 去掉 `secret`）
+- `webhook`：原始 JSON（保持兼容，不带 channel 时按域名自动识别三类 IM）
+
+先探活：`POST /api/ai-ops/notifications/test`，`body.channel` 可选上述四种。
+
 - `incident_created` 在 manual、offline/expiry、telemetry 异常三类创建路径都会触发；
   `incident_resolved` 在人工 resolve/close 与节点恢复自动解决时都会触发。
 - 规则 API：`POST /ai-ops/notifications/rules` 建规则，
