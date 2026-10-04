@@ -399,8 +399,12 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 - 实测：`lanhc-canary-agent` 上报 RTX 3080（4 项 GPU 指标）、
   `local_ips=['172.31.145.44']`；`baizor-agent`/`sg4028-agent` 上报 CPU 机，
   GPU 0，local IP 分别为 `172.21.0.2` 与空。
-- `sg4028-agent` 是旧二进制，`agent_gpu` 返回 404，failure board 如实显示；
-  升级发行包 `1.102.5+lanhc13` 后恢复。
+- `sg4028-agent` 已从 `lanhc-agent-host:20261004` 升级到 `20261004-19`，
+  并在其 compose 加 `runtime: nvidia` + `NVIDIA_VISIBLE_DEVICES=all` /
+  `NVIDIA_DRIVER_CAPABILITIES=utility`，现在可采集 2× Tesla V100-PCIE-32GB；
+  failure board 上该节点的 `agent_gpu 404` 已消失。
+- 记：GPU 容器必须用 NVIDIA runtime（或 `--gpus`），只挂 `/dev/nvidia*`
+  不足以让 `nvidia-smi` 找到驱动库。
 
 ## 6. 验证验收（R930 场景）
 
