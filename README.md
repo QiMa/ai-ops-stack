@@ -68,7 +68,7 @@ cd /home/dev/src/ai-ops-stack
 
 - `ccr.ccs.tencentyun.com/lucky/headscale:20261004`
 - `ccr.ccs.tencentyun.com/lucky/hs-console:20261004`
-- `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004`
+- `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004-17`
 - `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004`
 - `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261004`
 

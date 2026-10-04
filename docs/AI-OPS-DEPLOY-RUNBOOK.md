@@ -336,8 +336,8 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry/rules \
 - 配置：`AIOPS_TELEMETRY_ENABLED=1`、`AIOPS_TELEMETRY_INTERVAL_MS`、
   `AIOPS_TELEMETRY_NODES`（留空 = 所有 agent 节点）、`AIOPS_TENANT_ID`。
 - 手动补一发：容器内 `node worker/worker.js --telemetry`。
-- 生产验证：2026-10-04 已上线 `lanhc-ops-runner:20261004`，
-  `[worker] telemetry push: nodes=2 samples=21 pushed=21`。
+- 生产验证：2026-10-04 已上线 `lanhc-ops-runner:20261004-17`，
+  `[worker] telemetry push: nodes=3 samples=25 pushed=25`。
 
 Hub 的 `POST /api/ai-ops/telemetry` 也可手工调用（异常排查用）：
 
@@ -354,10 +354,15 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 - 老版本 `lanhc-agent` 没有 `/v1/disk/list`，`agent_disks` 会返回
   `404 page not found`；该节点如实记入 collection failures，升级 agent 后恢复。
 - 2026-10-04 已把金丝雀 agent 升到 `0e500124c`（发布包
-  `1.102.5+lanhc12`）：`/v1/disk/list` 存在，但该 WSL 宿主未装
-  `smartmontools`，因此现在返回结构化错误
-  `agent_disks@lanhc-canary-agent (smartctl not installed)`，而不是静默跳过。
-  在该宿主 `apt install smartmontools` 后即可开始上报该节点的磁盘指标。
+  `1.102.5+lanhc12`）：`/v1/disk/list` 存在。该 WSL 宿主无 sudo，改用
+  `cmd/lanhc-agent/tools/install-smartctl-wsl2.sh ~/bin` 安装 shim（原生缺失时
+  经 privileged 一次性容器执行 smartctl）。现在 `agent_disks` 正常枚举
+  `/dev/sda`..`/dev/sdf`。
+- 同一日 `ops-runner` 升到 `20261004-17`：遥测不再把“可枚举但不可读”的盘
+  静默跳过，而是逐盘记入 failures。金丝雀日志变为
+  `agent_smart@lanhc-canary-agent (exit status 2)` × 6 +
+  `(no SMART samples collected for host)`。WSL2 虚拟盘没有真实 ATA 属性，
+  这是正确行为；真实 SMART 判据只在物理机（`baizor-agent` MegaRAID 盘）上生效。
 - 生产 baizor 宿主的 `lanhc-agent-host` 容器同日升到 `20261004`（内含
   `1.102.5+lanhc12` 二进制与 `smartctl`），4 块 MegaRAID 物理盘均可枚举。
 
@@ -434,11 +439,11 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 
 | 镜像 | Registry |
 | --- | --- |
-| `lanhc-ops-runner` | `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004` |
+| `lanhc-ops-runner` | `ccr.ccs.tencentyun.com/lucky/lanhc-ops-runner:20261004-17` |
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-11` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-16` |
 
 设备识别增强：
 

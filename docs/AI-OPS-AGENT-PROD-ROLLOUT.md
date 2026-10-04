@@ -126,15 +126,24 @@ inventory / health；`Lanhc Sentinel` 侧可对存活节点发起只读调查。
 处理办法（保持 agent 非 root）：
 
 1. 物理机：`sudo apt-get install -y smartmontools` 即可，无需改 agent。
-2. WSL2：把 `lanhc/cmd/lanhc-agent/tools/smartctl-wsl2.sh` 放到 PATH 中作为
-   `smartctl`；它优先调用原生 smartctl，缺原生工具时经 privileged 一次性容器
-   枚举 `/dev`，保证 `--scan-open` 不空。
-3. 验证链路：`agent_disks` 应返回设备列表、`telemetry` 日志不再出现 collection
-   failure。
+2. WSL2：一条命令装好 shim，无需 sudo：
 
-注意：WSL2 虚拟盘不会给出真实 ATA SMART 属性，因此该节点不会有
-`smart.*` 样本——这是正确行为（不上报假数据）。真实二手盘判据只在物理机
-（如 `baizor-agent` 的 MegaRAID 物理盘）上有意义。
+   ```sh
+   lanhc/cmd/lanhc-agent/tools/install-smartctl-wsl2.sh ~/bin
+   ```
+
+   它构建 `lanhc/smartmontools:7.4` 并把 `smartctl-wsl2.sh` 装成
+   `~/bin/smartctl`；shim 优先调用原生 smartctl，缺原生工具时经 privileged
+   一次性容器枚举 `/dev`，保证 `--scan-open` 不空。`~/bin` 在 PATH 中后重启
+   `lanhc-agent`。
+3. 验证链路：`agent_disks` 应返回设备列表；`telemetry` 日志不再出现
+   `smartctl not installed`。
+
+注意：WSL2 虚拟盘不会给出真实 ATA SMART 属性。`ops-runner` 现在的语义是
+“如实上报失败”而非静默跳过，所以 WSL2 节点会看到每块虚拟盘一条
+`agent_smart@<node>:<dev> (exit status 2)`，以及一条
+`no SMART samples collected for host`——这是正确行为（不上报假数据）。
+真实二手盘判据只在物理机（如 `baizor-agent` 的 MegaRAID 物理盘）上有意义。
 
 ## 4. 验收标准
 
