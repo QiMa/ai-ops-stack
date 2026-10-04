@@ -218,7 +218,9 @@ AIOPS_RULE_INTERVAL_MS=120000
 
 - 事件：`/ai-ops/incidents`
 - 事件详情：`/ai-ops/incidents/:id`（含实时调查进度）
+- 遥测：`/ai-ops/telemetry`（每台 agent 最新 SMART / 负载样本，按设备+序列号去重）
 - 通知规则：`/ai-ops/notifications`
+- 设备资产：`/headscale/devices`（Platform / container|host / client 版本）
 
 ## 5. 告警与通知配置
 
@@ -233,7 +235,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/notifications/rules \
 支持的事件：`incident_created` / `incident_resolved` / `action_pending` /
 `action_executed` / `ai_finished`。
 
-通知 channel 已内置三类国内 IM 机器人适配器（`hs-console:20261004-7` 上线）：
+通知 channel 已内置三类国内 IM 机器人适配器（`hs-console:20261004-9` 上线）：
 
 - `wecom`：企业微信群机器人，`markdown`
   `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx`
@@ -421,7 +423,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-6` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-9` |
 
 设备识别增强：
 
