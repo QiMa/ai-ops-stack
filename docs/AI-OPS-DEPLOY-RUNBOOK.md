@@ -247,6 +247,19 @@ curl -X POST https://console.lanhc.com/api/ai-ops/notifications/rules \
 
 先探活：`POST /api/ai-ops/notifications/test`，`body.channel` 可选上述四种。
 
+**机器人申请入口**：
+
+| 平台 | 申请位置 |
+| --- | --- |
+| 企业微信 | 目标群 → 右上角「...」→ 群机器人 → 添加 → 复制 `key=xxx` webhook |
+| 飞书 | 目标群 → 设置 → 群机器人 → 添加「自定义机器人」→ 复制 `hook/xxx` webhook |
+| 钉钉 | 目标群 → 群设置 → 智能群助手 → 添加机器人 → 自定义 → 复制 `access_token=xxx`；若要加签则勾选「加签」并把密钥作为 `secret` 查询参数 |
+| 通用 webhook | 任意外网可达的 HTTP 接收端（如 N8N / 自建 catcher） |
+
+> 提醒：国内 IM 机器人通常要求消息命中「关键词」或白名单，首测可能返回
+> `310000 keyword not in content`，在规则文案中带上固定词（如 `lanhc` / `AI运维`）
+> 即可。不要把机器人 URL 提交进 git，生产只写 compose 或控制台规则表。
+
 - `incident_created` 在 manual、offline/expiry、telemetry 异常三类创建路径都会触发；
   `incident_resolved` 在人工 resolve/close 与节点恢复自动解决时都会触发。
 - 规则 API：`POST /ai-ops/notifications/rules` 建规则，
