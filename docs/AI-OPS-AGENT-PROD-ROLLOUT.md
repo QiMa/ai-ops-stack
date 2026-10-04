@@ -114,6 +114,28 @@ curl -sS -X POST http://$AGENT_IP:8088/v1/exec \
 `https://console.lanhc.com/ai-ops/*`：设备列表出现新 agent 节点，能拉到
 inventory / health；`Lanhc Sentinel` 侧可对存活节点发起只读调查。
 
+## 3.5 WSL2 / 无 root 金丝雀的 smartctl
+
+金丝雀机是 WSL2 时，`lanhc-agent` 以普通用户运行打不开 `/dev/sd*`
+（`Msft Virtual Disk`），`agent_disks` 会报 `smartctl not installed`：
+
+```text
+[worker] telemetry: 1 collection failure(s): agent_disks@lanhc-canary-agent (smartctl not installed)
+```
+
+处理办法（保持 agent 非 root）：
+
+1. 物理机：`sudo apt-get install -y smartmontools` 即可，无需改 agent。
+2. WSL2：把 `lanhc/cmd/lanhc-agent/tools/smartctl-wsl2.sh` 放到 PATH 中作为
+   `smartctl`；它优先调用原生 smartctl，缺原生工具时经 privileged 一次性容器
+   枚举 `/dev`，保证 `--scan-open` 不空。
+3. 验证链路：`agent_disks` 应返回设备列表、`telemetry` 日志不再出现 collection
+   failure。
+
+注意：WSL2 虚拟盘不会给出真实 ATA SMART 属性，因此该节点不会有
+`smart.*` 样本——这是正确行为（不上报假数据）。真实二手盘判据只在物理机
+（如 `baizor-agent` 的 MegaRAID 物理盘）上有意义。
+
 ## 4. 验收标准
 
 - [ ] 目标机 agent 进程 active，开机自启已 enable。
