@@ -385,6 +385,23 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 - P4：生产 LAN 内 `192.168.100.202/.203` 为 Web Switch 管理口，非 Redfish；
   真实 BMC 未接入。`mcp-lanhc` 在缺凭据时返回结构化错误，不伪造带外证据。
 
+## 6.6 GPU / 其它 IP 采集（2026-10-04）
+
+在设备卡和遥测页补上“这台设备到底是谁、有哪些算力”的信息：
+
+- `lanhc-agent` `/v1/gpu`：`nvidia-smi --query-gpu`，无 NVIDIA 驱动返回
+  `error: nvidia-smi not installed`，不上报假 GPU。
+- `lanhc-agent` inventory 增加 `local_ips`：过滤 tailnet CGNAT/ULA 后输出
+  LAN 地址，控制台用于带外定位设备。
+- `ops-runner`：`gpu.*` 遥测样本 + `ai_ops_device_info` 快照。
+- 生产 pin：`lanhc-agent-host:20261004-19`、
+  `lanhc-ops-runner:20261004-20`、`hs-console:20261004-20`。
+- 实测：`lanhc-canary-agent` 上报 RTX 3080（4 项 GPU 指标）、
+  `local_ips=['172.31.145.44']`；`baizor-agent`/`sg4028-agent` 上报 CPU 机，
+  GPU 0，local IP 分别为 `172.21.0.2` 与空。
+- `sg4028-agent` 是旧二进制，`agent_gpu` 返回 404，failure board 如实显示；
+  升级发行包 `1.102.5+lanhc13` 后恢复。
+
 ## 6. 验证验收（R930 场景）
 
 1. 设备掉线 → hub 调度器扫出 `offline` incident，P2 通知到 webhook。
