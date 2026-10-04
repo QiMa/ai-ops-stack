@@ -220,7 +220,12 @@ AIOPS_RULE_INTERVAL_MS=120000
 - 事件详情：`/ai-ops/incidents/:id`（含实时调查进度）
 - 遥测：`/ai-ops/telemetry`（每台 agent 最新 SMART / 负载样本，按设备+序列号去重）
 - 通知规则：`/ai-ops/notifications`
+- 通知记录：`/ai-ops/notification-logs`（每次发送的事件/渠道/状态/HTTP/错误与实际 POST 内容，机器人 key 已脱敏）
 - 设备资产：`/headscale/devices`（Platform / container|host / client 版本）
+
+通知历史从 `ai_ops_notification_log` 表读取，接口
+`GET /api/ai-ops/notifications/logs?tenant_id=&event=&status=&limit=`。
+发送尝试只在 `hs-console:20261004-11` 起开始落库，更早的通知不会回填。
 
 ## 5. 告警与通知配置
 
@@ -433,7 +438,7 @@ curl -X POST https://console.lanhc.com/api/ai-ops/telemetry \
 | `lanhc-tailnet-sidecar` | `ccr.ccs.tencentyun.com/lucky/lanhc-tailnet-sidecar:20261003` |
 | `lanhc-agent-host` | `ccr.ccs.tencentyun.com/lucky/lanhc-agent-host:20261004` |
 | `headscale` | `ccr.ccs.tencentyun.com/lucky/headscale:20261003-2` |
-| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-9` |
+| `hs-console` | `ccr.ccs.tencentyun.com/lucky/hs-console:20261004-11` |
 
 设备识别增强：
 
