@@ -253,6 +253,8 @@ curl -X POST https://console.lanhc.com/api/ai-ops/notifications/rules \
 
 - `incident_created`（id 3）：`wecom`、`severity_min=p3`、enabled
 - `incident_resolved`（id 4）：`wecom`、`severity_min=p3`、enabled
+- `ai_finished`（id 5）：`wecom`、`severity_min=p3`、enabled；诊断写入时
+  推送 summary / risk / confidence / 建议列表与 console 深链。
 - 目标为真实企业微信群机器人（URL 不进 git，只在生产规则表保存）。
 - 已验证真实送达：机器人探活返回 `errcode=0`，创建/解决测试事件后无
   notifier error。
